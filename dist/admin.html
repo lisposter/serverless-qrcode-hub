@@ -367,7 +367,7 @@
           <progress id="list-loading" class="progress progress-primary hidden w-full"></progress>
 
           <div id="desktop-list" class="hidden overflow-x-auto lg:block">
-            <table class="table table-zebra">
+            <table class="table table-zebra min-w-max">
               <thead>
                 <tr>
                   <th class="w-12">
@@ -377,7 +377,7 @@
                   <th>目标 URL</th>
                   <th>有效日期</th>
                   <th>访问数据</th>
-                  <th>状态</th>
+                  <th class="w-28">状态</th>
                   <th class="w-52">操作</th>
                 </tr>
               </thead>
@@ -616,15 +616,15 @@
 
     function getStatusMeta(item) {
       if (item.status === 'expired') {
-        return { label: '已过期', className: 'badge badge-error badge-outline' };
+        return { label: '已过期', className: 'badge badge-error badge-outline whitespace-nowrap' };
       }
       if (item.status === 'expiring') {
-        return { label: '即将过期', className: 'badge badge-warning badge-outline' };
+        return { label: '即将过期', className: 'badge badge-warning badge-outline whitespace-nowrap' };
       }
       if (item.status === 'disabled') {
-        return { label: '已禁用', className: 'badge badge-neutral badge-outline' };
+        return { label: '已禁用', className: 'badge badge-neutral badge-outline whitespace-nowrap' };
       }
-      return { label: '正常', className: 'badge badge-success badge-outline' };
+      return { label: '正常', className: 'badge badge-success badge-outline whitespace-nowrap' };
     }
 
     function renderDashboard(data) {
