@@ -357,7 +357,7 @@ async function initDatabase() {
     await DB.prepare('ALTER TABLE mappings ADD COLUMN last_visited_at TEXT').run();
   }
   if (!columns.has('updated_at')) {
-    await DB.prepare('ALTER TABLE mappings ADD COLUMN updated_at TEXT DEFAULT CURRENT_TIMESTAMP').run();
+    await DB.prepare('ALTER TABLE mappings ADD COLUMN updated_at TEXT').run();
   }
 
   await DB.prepare(`
