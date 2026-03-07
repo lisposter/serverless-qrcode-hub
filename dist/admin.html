@@ -10,7 +10,7 @@
     })();
   </script>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>管理后台</title>
   <link href="/daisyui@5.css" rel="stylesheet" type="text/css">
   <script src="/tailwindcss@4.js"></script>
@@ -38,13 +38,67 @@
       pointer-events: auto;
       min-width: min(92vw, 420px);
     }
+    .dashboard-shell {
+      min-height: 100vh;
+    }
+    .modal-box-responsive {
+      width: min(96vw, 960px);
+      max-height: calc(100vh - 2rem);
+      overflow-y: auto;
+    }
+    .editor-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .rich-editor {
+      min-height: 120px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 1rem;
+      background: rgba(148, 163, 184, 0.08);
+      padding: 0.9rem 1rem;
+      line-height: 1.7;
+      outline: none;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+    .rich-editor:focus {
+      border-color: rgba(59, 130, 246, 0.7);
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.18);
+    }
+    .rich-editor[data-empty="true"]::before {
+      content: attr(data-placeholder);
+      color: rgba(100, 116, 139, 0.9);
+      pointer-events: none;
+    }
+    .rich-editor :where(p, div, ul, ol) {
+      margin: 0.55rem 0 0;
+    }
+    .rich-editor :where(p, div, ul, ol):first-child {
+      margin-top: 0;
+    }
+    .rich-editor :where(ul, ol) {
+      padding-left: 1.35rem;
+    }
+    .rich-editor a {
+      color: #2563eb;
+      text-decoration: underline;
+    }
+    @media (max-width: 640px) {
+      .modal-box-responsive {
+        width: calc(100vw - 1rem);
+        max-height: calc(100vh - 1rem);
+        padding: 1.25rem;
+      }
+    }
   </style>
 </head>
 <body class="bg-base-200 text-base-content">
   <div id="alertContainer" class="fixed top-4 left-1/2 z-50 flex -translate-x-1/2 flex-col gap-3"></div>
 
   <dialog id="qr-modal" class="modal">
-    <div class="modal-box max-w-lg">
+    <div class="modal-box modal-box-responsive max-w-lg">
       <form method="dialog">
         <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
       </form>
@@ -85,29 +139,29 @@
   </dialog>
 
   <dialog id="edit-modal" class="modal">
-    <div class="modal-box max-w-2xl">
+    <div class="modal-box modal-box-responsive max-w-4xl">
       <form method="dialog">
         <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
       </form>
       <h3 class="text-lg font-bold">编辑短链</h3>
-      <div class="mt-4 grid gap-4 md:grid-cols-2">
-        <label class="form-control md:col-span-1">
+      <div class="mt-4 grid gap-4 lg:grid-cols-2">
+        <label class="form-control lg:col-span-1">
           <span class="label-text mb-2">条目名称</span>
           <input id="edit-name" type="text" class="input input-bordered w-full" placeholder="条目名称">
         </label>
-        <label class="form-control md:col-span-1">
+        <label class="form-control lg:col-span-1">
           <span class="label-text mb-2">短链名</span>
           <input id="edit-path" type="text" class="input input-bordered w-full" placeholder="short-name">
         </label>
-        <label class="form-control md:col-span-2">
+        <label class="form-control lg:col-span-2">
           <span class="label-text mb-2">目标 URL</span>
           <input id="edit-target" type="text" class="input input-bordered w-full" placeholder="https://example.com">
         </label>
-        <label class="form-control md:col-span-1">
+        <label class="form-control lg:col-span-1">
           <span class="label-text mb-2">有效日期</span>
           <input id="edit-expiry" type="date" class="input input-bordered w-full">
         </label>
-        <div class="flex flex-col gap-3 md:col-span-1 md:justify-end">
+        <div class="flex flex-col gap-3 lg:col-span-1 lg:justify-end">
           <label class="label cursor-pointer justify-start gap-2 p-0">
             <input id="edit-enabled" type="checkbox" class="toggle toggle-primary">
             <span class="label-text">启用该短链</span>
@@ -116,6 +170,42 @@
             <input id="edit-wechat" type="checkbox" class="toggle toggle-primary">
             <span class="label-text">微信二维码</span>
           </label>
+        </div>
+        <div class="rounded-2xl border border-base-300 bg-base-200 p-4 lg:col-span-2">
+          <div class="flex flex-col gap-3">
+            <div>
+              <div class="font-semibold">公告</div>
+              <div class="text-sm opacity-70">显示在标题下方，支持链接和简单排版</div>
+            </div>
+            <div class="editor-toolbar">
+              <button type="button" class="btn btn-xs btn-outline" data-editor-target="edit-announcement-editor" data-editor-command="bold">粗体</button>
+              <button type="button" class="btn btn-xs btn-outline" data-editor-target="edit-announcement-editor" data-editor-command="italic">斜体</button>
+              <button type="button" class="btn btn-xs btn-outline" data-editor-target="edit-announcement-editor" data-editor-command="underline">下划线</button>
+              <button type="button" class="btn btn-xs btn-outline" data-editor-target="edit-announcement-editor" data-editor-command="unorderedList">列表</button>
+              <button type="button" class="btn btn-xs btn-outline" data-editor-target="edit-announcement-editor" data-editor-command="orderedList">编号</button>
+              <button type="button" class="btn btn-xs btn-outline" data-editor-target="edit-announcement-editor" data-editor-command="link">链接</button>
+              <button type="button" class="btn btn-xs btn-ghost" data-editor-target="edit-announcement-editor" data-editor-command="clear">清除</button>
+            </div>
+            <div id="edit-announcement-editor" class="rich-editor" contenteditable="true" data-placeholder="请输入标题下方公告" data-empty="true"></div>
+          </div>
+        </div>
+        <div class="rounded-2xl border border-base-300 bg-base-200 p-4 lg:col-span-2">
+          <div class="flex flex-col gap-3">
+            <div>
+              <div class="font-semibold">提示</div>
+              <div class="text-sm opacity-70">显示在二维码下方，支持链接和简单排版</div>
+            </div>
+            <div class="editor-toolbar">
+              <button type="button" class="btn btn-xs btn-outline" data-editor-target="edit-hint-editor" data-editor-command="bold">粗体</button>
+              <button type="button" class="btn btn-xs btn-outline" data-editor-target="edit-hint-editor" data-editor-command="italic">斜体</button>
+              <button type="button" class="btn btn-xs btn-outline" data-editor-target="edit-hint-editor" data-editor-command="underline">下划线</button>
+              <button type="button" class="btn btn-xs btn-outline" data-editor-target="edit-hint-editor" data-editor-command="unorderedList">列表</button>
+              <button type="button" class="btn btn-xs btn-outline" data-editor-target="edit-hint-editor" data-editor-command="orderedList">编号</button>
+              <button type="button" class="btn btn-xs btn-outline" data-editor-target="edit-hint-editor" data-editor-command="link">链接</button>
+              <button type="button" class="btn btn-xs btn-ghost" data-editor-target="edit-hint-editor" data-editor-command="clear">清除</button>
+            </div>
+            <div id="edit-hint-editor" class="rich-editor" contenteditable="true" data-placeholder="请输入二维码下方提示" data-empty="true"></div>
+          </div>
         </div>
       </div>
       <div class="mt-4 rounded-2xl border border-base-300 bg-base-200 p-4">
@@ -164,14 +254,14 @@
   <input id="edit-qr-file" type="file" accept="image/*" class="hidden">
   <input id="import-file" type="file" accept="application/json" class="hidden">
 
-  <div class="min-h-screen">
-    <div class="navbar sticky top-0 z-30 border-b border-base-300 bg-base-100/90 px-4 backdrop-blur">
-      <div class="mx-auto flex w-full max-w-7xl items-center justify-between gap-3">
+  <div class="dashboard-shell">
+    <div class="navbar sticky top-0 z-30 border-b border-base-300 bg-base-100/90 px-3 backdrop-blur sm:px-4">
+      <div class="mx-auto flex w-full max-w-7xl flex-col items-start gap-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:py-2">
         <div>
           <div class="text-xl font-bold text-primary">二维码短链管理后台</div>
           <div class="text-sm text-base-content/60">更顺手地管理短链、微信群二维码和访问数据</div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex w-full items-center justify-end gap-2 sm:w-auto">
           <button id="theme-toggle-btn" class="btn btn-ghost btn-circle" type="button" aria-label="切换主题">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="h-6 w-6">
               <path id="theme-toggle-path" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
@@ -182,8 +272,8 @@
       </div>
     </div>
 
-    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6">
-      <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-4 px-3 py-4 sm:gap-6 sm:px-4 sm:py-6">
+      <section class="grid gap-4 grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         <div class="card bg-base-100 shadow-sm">
           <div class="card-body gap-1 p-5">
             <div class="text-sm text-base-content/60">总条目</div>
@@ -222,8 +312,8 @@
         </div>
       </section>
 
-      <section class="grid gap-6 xl:grid-cols-[1.1fr,1fr]">
-        <div class="card bg-base-100 shadow-sm">
+      <section class="grid gap-4 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] 2xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] xl:items-start">
+        <div class="card bg-base-100 shadow-sm xl:sticky xl:top-24">
           <div class="card-body p-5">
             <div class="flex items-start justify-between gap-3">
               <div>
@@ -255,24 +345,24 @@
               <h2 class="card-title text-xl">新建短链</h2>
               <p class="text-sm text-base-content/60">支持普通短链和微信群二维码活码</p>
             </div>
-            <div class="mt-4 grid gap-4 md:grid-cols-2">
-              <label class="form-control md:col-span-1">
+            <div class="mt-4 grid gap-4 lg:grid-cols-2">
+              <label class="form-control lg:col-span-1">
                 <span class="label-text mb-2">条目名称</span>
                 <input id="create-name" type="text" class="input input-bordered w-full" placeholder="例如：音乐群 1">
               </label>
-              <label class="form-control md:col-span-1">
+              <label class="form-control lg:col-span-1">
                 <span class="label-text mb-2">短链名</span>
                 <input id="create-path" type="text" class="input input-bordered w-full" placeholder="例如：music1">
               </label>
-              <label class="form-control md:col-span-2">
+              <label class="form-control lg:col-span-2">
                 <span class="label-text mb-2">目标 URL</span>
                 <input id="create-target" type="text" class="input input-bordered w-full" placeholder="https://example.com">
               </label>
-              <label class="form-control md:col-span-1">
+              <label class="form-control lg:col-span-1">
                 <span class="label-text mb-2">有效日期</span>
                 <input id="create-expiry" type="date" class="input input-bordered w-full">
               </label>
-              <div class="flex flex-col gap-3 md:col-span-1 md:justify-end">
+              <div class="flex flex-col gap-3 lg:col-span-1 lg:justify-end">
                 <label class="label cursor-pointer justify-start gap-2 p-0">
                   <input id="create-enabled" type="checkbox" class="toggle toggle-primary" checked>
                   <span class="label-text">启用该短链</span>
@@ -282,8 +372,44 @@
                   <span class="label-text">微信二维码</span>
                 </label>
               </div>
+              <div class="rounded-2xl border border-base-300 bg-base-200 p-4 lg:col-span-2">
+                <div class="flex flex-col gap-3">
+                  <div>
+                    <div class="font-semibold">公告</div>
+                    <div class="text-sm opacity-70">显示在标题下方，支持链接和简单排版</div>
+                  </div>
+                  <div class="editor-toolbar">
+                    <button type="button" class="btn btn-xs btn-outline" data-editor-target="create-announcement-editor" data-editor-command="bold">粗体</button>
+                    <button type="button" class="btn btn-xs btn-outline" data-editor-target="create-announcement-editor" data-editor-command="italic">斜体</button>
+                    <button type="button" class="btn btn-xs btn-outline" data-editor-target="create-announcement-editor" data-editor-command="underline">下划线</button>
+                    <button type="button" class="btn btn-xs btn-outline" data-editor-target="create-announcement-editor" data-editor-command="unorderedList">列表</button>
+                    <button type="button" class="btn btn-xs btn-outline" data-editor-target="create-announcement-editor" data-editor-command="orderedList">编号</button>
+                    <button type="button" class="btn btn-xs btn-outline" data-editor-target="create-announcement-editor" data-editor-command="link">链接</button>
+                    <button type="button" class="btn btn-xs btn-ghost" data-editor-target="create-announcement-editor" data-editor-command="clear">清除</button>
+                  </div>
+                  <div id="create-announcement-editor" class="rich-editor" contenteditable="true" data-placeholder="请输入标题下方公告" data-empty="true"></div>
+                </div>
+              </div>
+              <div class="rounded-2xl border border-base-300 bg-base-200 p-4 lg:col-span-2">
+                <div class="flex flex-col gap-3">
+                  <div>
+                    <div class="font-semibold">提示</div>
+                    <div class="text-sm opacity-70">显示在二维码下方，支持链接和简单排版</div>
+                  </div>
+                  <div class="editor-toolbar">
+                    <button type="button" class="btn btn-xs btn-outline" data-editor-target="create-hint-editor" data-editor-command="bold">粗体</button>
+                    <button type="button" class="btn btn-xs btn-outline" data-editor-target="create-hint-editor" data-editor-command="italic">斜体</button>
+                    <button type="button" class="btn btn-xs btn-outline" data-editor-target="create-hint-editor" data-editor-command="underline">下划线</button>
+                    <button type="button" class="btn btn-xs btn-outline" data-editor-target="create-hint-editor" data-editor-command="unorderedList">列表</button>
+                    <button type="button" class="btn btn-xs btn-outline" data-editor-target="create-hint-editor" data-editor-command="orderedList">编号</button>
+                    <button type="button" class="btn btn-xs btn-outline" data-editor-target="create-hint-editor" data-editor-command="link">链接</button>
+                    <button type="button" class="btn btn-xs btn-ghost" data-editor-target="create-hint-editor" data-editor-command="clear">清除</button>
+                  </div>
+                  <div id="create-hint-editor" class="rich-editor" contenteditable="true" data-placeholder="请输入二维码下方提示" data-empty="true"></div>
+                </div>
+              </div>
             </div>
-            <button id="create-submit-btn" type="button" class="btn btn-primary mt-6">添加短链</button>
+            <button id="create-submit-btn" type="button" class="btn btn-primary mt-6 w-full sm:w-auto">添加短链</button>
           </div>
         </div>
       </section>
@@ -295,21 +421,21 @@
               <h2 class="card-title text-xl">短链列表</h2>
               <p class="text-sm text-base-content/60">搜索、筛选、排序、批量删除与导入导出</p>
             </div>
-            <div class="flex flex-wrap gap-2">
+            <div class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
               <button id="import-btn" type="button" class="btn btn-outline btn-sm">导入 JSON</button>
               <button id="export-btn" type="button" class="btn btn-outline btn-sm">导出 JSON</button>
-              <button id="bulk-delete-btn" type="button" class="btn btn-error btn-sm" disabled>批量删除</button>
+              <button id="bulk-delete-btn" type="button" class="btn btn-error btn-sm col-span-2 sm:col-span-1" disabled>批量删除</button>
             </div>
           </div>
 
-          <div class="join w-full overflow-x-auto">
-            <button id="view-all-btn" type="button" class="join-item btn btn-sm btn-primary">全部</button>
-            <button id="view-expiring-btn" type="button" class="join-item btn btn-sm">即将过期</button>
-            <button id="view-expired-btn" type="button" class="join-item btn btn-sm">已过期</button>
+          <div class="grid grid-cols-3 gap-2 sm:flex sm:gap-2">
+            <button id="view-all-btn" type="button" class="btn btn-sm btn-primary">全部</button>
+            <button id="view-expiring-btn" type="button" class="btn btn-sm">即将过期</button>
+            <button id="view-expired-btn" type="button" class="btn btn-sm">已过期</button>
           </div>
 
-          <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-            <label class="form-control xl:col-span-2">
+          <div class="grid gap-3 sm:grid-cols-2 2xl:grid-cols-6">
+            <label class="form-control 2xl:col-span-2">
               <span class="label-text mb-2">搜索</span>
               <input id="search-input" type="text" class="input input-bordered w-full" placeholder="搜索名称、短链名、目标 URL">
             </label>
@@ -368,8 +494,8 @@
 
           <progress id="list-loading" class="progress progress-primary hidden w-full"></progress>
 
-          <div id="desktop-list" class="hidden lg:block">
-            <table class="table table-zebra table-fixed w-full">
+          <div id="desktop-list" class="hidden xl:block overflow-x-auto">
+            <table class="table table-zebra table-fixed min-w-[1080px] w-full">
               <thead>
                 <tr>
                   <th class="w-12">
@@ -387,7 +513,7 @@
             </table>
           </div>
 
-          <div id="mobile-list" class="grid gap-3 lg:hidden"></div>
+          <div id="mobile-list" class="grid gap-4 xl:hidden"></div>
 
           <div id="empty-state" class="hidden rounded-2xl border border-dashed border-base-300 px-6 py-12 text-center">
             <div class="text-lg font-medium">当前没有匹配的数据</div>
@@ -429,17 +555,20 @@
     };
 
     const elements = {};
+    const DEFAULT_ANNOUNCEMENT_HTML = '<p>请长按识别下方二维码</p>';
+    const DEFAULT_HINT_HTML = '<p>二维码失效请联系作者更新</p>';
+    const RICH_EDITOR_IDS = ['create-announcement-editor', 'create-hint-editor', 'edit-announcement-editor', 'edit-hint-editor'];
 
     function cacheElements() {
       const ids = [
         'alertContainer', 'theme-toggle-btn', 'theme-toggle-path', 'logout-btn', 'metric-total', 'metric-active', 'metric-expiring',
         'metric-expired', 'metric-wechat', 'metric-visits', 'upload-trigger-btn', 'reset-qr-btn', 'qr-file', 'qr-result', 'decoded-text',
         'copy-decoded-btn', 'create-qr-code-data', 'create-name', 'create-path', 'create-target', 'create-expiry', 'create-enabled',
-        'create-wechat', 'create-submit-btn', 'import-btn', 'export-btn', 'bulk-delete-btn', 'view-all-btn', 'view-expiring-btn',
+        'create-wechat', 'create-announcement-editor', 'create-hint-editor', 'create-submit-btn', 'import-btn', 'export-btn', 'bulk-delete-btn', 'view-all-btn', 'view-expiring-btn',
         'view-expired-btn', 'search-input', 'status-select', 'type-select', 'sort-by-select', 'sort-order-select', 'selection-summary',
         'clear-selection-btn', 'page-size-select', 'list-loading', 'select-all-checkbox', 'table-body', 'mobile-list', 'empty-state',
         'pagination-summary', 'prev-page-btn', 'next-page-btn', 'import-file', 'qr-modal', 'qr-container', 'qr-url', 'qr-show-logo',
-        'qr-dots-style', 'qr-download', 'edit-modal', 'edit-name', 'edit-path', 'edit-target', 'edit-expiry', 'edit-enabled', 'edit-wechat',
+        'qr-dots-style', 'qr-download', 'edit-modal', 'edit-name', 'edit-path', 'edit-target', 'edit-expiry', 'edit-enabled', 'edit-wechat', 'edit-announcement-editor', 'edit-hint-editor',
         'edit-upload-btn', 'edit-qr-file', 'edit-qr-result', 'edit-decoded-text', 'edit-qr-code-data', 'edit-save-btn', 'delete-modal',
         'delete-message', 'delete-confirm-btn'
       ];
@@ -455,6 +584,222 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+    }
+
+    function sanitizeEditorHref(value) {
+      const href = String(value || '').trim();
+      if (!href) {
+        return '';
+      }
+      if (/^(#|\/(?!\/)|\.\.?(\/|$))/i.test(href)) {
+        return href;
+      }
+      try {
+        const parsed = new URL(href, location.origin);
+        if (['http:', 'https:', 'mailto:', 'tel:'].includes(parsed.protocol)) {
+          return href;
+        }
+      } catch {
+      }
+      return '';
+    }
+
+    function sanitizeRichTextNode(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return document.createTextNode(node.textContent || '');
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) {
+        return document.createDocumentFragment();
+      }
+
+      const tag = node.tagName.toLowerCase();
+      const tagMap = { b: 'strong', i: 'em' };
+      const normalizedTag = tagMap[tag] || tag;
+      const allowed = new Set(['a', 'br', 'div', 'em', 'li', 'ol', 'p', 'span', 'strong', 'u', 'ul']);
+
+      if (!allowed.has(normalizedTag)) {
+        const fragment = document.createDocumentFragment();
+        for (const child of Array.from(node.childNodes)) {
+          fragment.appendChild(sanitizeRichTextNode(child));
+        }
+        return fragment;
+      }
+
+      if (normalizedTag === 'br') {
+        return document.createElement('br');
+      }
+
+      if (normalizedTag === 'a') {
+        const safeHref = sanitizeEditorHref(node.getAttribute('href'));
+        if (!safeHref) {
+          const fragment = document.createDocumentFragment();
+          for (const child of Array.from(node.childNodes)) {
+            fragment.appendChild(sanitizeRichTextNode(child));
+          }
+          return fragment;
+        }
+        const element = document.createElement('a');
+        element.setAttribute('href', safeHref);
+        if (/^https?:\/\//i.test(safeHref)) {
+          element.setAttribute('target', '_blank');
+          element.setAttribute('rel', 'noopener noreferrer');
+        }
+        for (const child of Array.from(node.childNodes)) {
+          element.appendChild(sanitizeRichTextNode(child));
+        }
+        return element;
+      }
+
+      const element = document.createElement(normalizedTag);
+      for (const child of Array.from(node.childNodes)) {
+        element.appendChild(sanitizeRichTextNode(child));
+      }
+      return element;
+    }
+
+    function normalizeRichTextHtml(html) {
+      const template = document.createElement('template');
+      template.innerHTML = html || '';
+      const container = document.createElement('div');
+      for (const child of Array.from(template.content.childNodes)) {
+        container.appendChild(sanitizeRichTextNode(child));
+      }
+      const normalized = container.innerHTML
+        .replace(/<div><br><\/div>/gi, '')
+        .replace(/<p><br><\/p>/gi, '')
+        .replace(/(?:&nbsp;|\u00A0)/g, ' ')
+        .trim();
+      const plain = container.textContent.replace(/\u00A0/g, ' ').trim();
+      return plain ? normalized : '';
+    }
+
+    function syncRichEditorState(editorId, normalize = false) {
+      const editor = elements[editorId];
+      if (!editor) {
+        return;
+      }
+      const normalized = normalize ? normalizeRichTextHtml(editor.innerHTML) : editor.innerHTML;
+      if (normalize && editor.innerHTML !== normalized) {
+        editor.innerHTML = normalized;
+      }
+      editor.dataset.empty = normalizeRichTextHtml(normalized) ? 'false' : 'true';
+    }
+
+    function setEditorHtml(editorId, html) {
+      const editor = elements[editorId];
+      if (!editor) {
+        return;
+      }
+      editor.innerHTML = normalizeRichTextHtml(html);
+      syncRichEditorState(editorId);
+    }
+
+    function getEditorHtml(editorId, fallback = '') {
+      const editor = elements[editorId];
+      if (!editor) {
+        return fallback;
+      }
+      const normalized = normalizeRichTextHtml(editor.innerHTML);
+      return normalized || fallback;
+    }
+
+    function restoreSelection(range) {
+      if (!range) {
+        return;
+      }
+      const selection = window.getSelection();
+      if (!selection) {
+        return;
+      }
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    function getEditorSelection(editor) {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) {
+        return null;
+      }
+      const range = selection.getRangeAt(0);
+      if (!editor.contains(range.commonAncestorContainer)) {
+        return null;
+      }
+      return range.cloneRange();
+    }
+
+    function applyRichEditorCommand(editorId, command) {
+      const editor = elements[editorId];
+      if (!editor) {
+        return;
+      }
+      editor.focus();
+
+      if (command === 'clear') {
+        document.execCommand('removeFormat', false);
+        document.execCommand('unlink', false);
+        syncRichEditorState(editorId, true);
+        return;
+      }
+
+      if (command === 'unorderedList') {
+        document.execCommand('insertUnorderedList', false);
+        syncRichEditorState(editorId, true);
+        return;
+      }
+
+      if (command === 'orderedList') {
+        document.execCommand('insertOrderedList', false);
+        syncRichEditorState(editorId, true);
+        return;
+      }
+
+      if (command === 'link') {
+        const savedRange = getEditorSelection(editor);
+        const href = window.prompt('请输入链接地址');
+        if (href === null) {
+          return;
+        }
+        const safeHref = sanitizeEditorHref(href);
+        if (!safeHref) {
+          showAlert('链接地址不合法');
+          return;
+        }
+        restoreSelection(savedRange);
+        const selection = window.getSelection();
+        const selectedText = selection ? selection.toString().trim() : '';
+        if (selectedText) {
+          document.execCommand('createLink', false, safeHref);
+        } else {
+          document.execCommand('insertHTML', false, `<a href="${escapeHtml(safeHref)}">${escapeHtml(safeHref)}</a>`);
+        }
+        syncRichEditorState(editorId, true);
+        return;
+      }
+
+      document.execCommand(command, false);
+      syncRichEditorState(editorId, true);
+    }
+
+    function bindRichEditors() {
+      document.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-editor-target][data-editor-command]');
+        if (!button) {
+          return;
+        }
+        applyRichEditorCommand(button.dataset.editorTarget, button.dataset.editorCommand);
+      });
+      for (const editorId of RICH_EDITOR_IDS) {
+        const editor = elements[editorId];
+        if (!editor) {
+          continue;
+        }
+        editor.addEventListener('input', () => syncRichEditorState(editorId));
+        editor.addEventListener('blur', () => syncRichEditorState(editorId, true));
+        editor.addEventListener('paste', () => {
+          setTimeout(() => syncRichEditorState(editorId, true), 0);
+        });
+        syncRichEditorState(editorId, true);
+      }
     }
 
     function formatDate(value) {
@@ -957,7 +1302,9 @@
         expiry: elements['create-expiry'].value,
         enabled: elements['create-enabled'].checked,
         isWechat: elements['create-wechat'].checked,
-        qrCodeData: elements['create-wechat'].checked ? elements['create-qr-code-data'].value : null
+        qrCodeData: elements['create-wechat'].checked ? elements['create-qr-code-data'].value : null,
+        announcementHtml: getEditorHtml('create-announcement-editor', DEFAULT_ANNOUNCEMENT_HTML),
+        hintHtml: getEditorHtml('create-hint-editor', DEFAULT_HINT_HTML)
       };
       validateFormData(payload);
       return payload;
@@ -972,7 +1319,9 @@
         expiry: elements['edit-expiry'].value,
         enabled: elements['edit-enabled'].checked,
         isWechat: elements['edit-wechat'].checked,
-        qrCodeData: elements['edit-wechat'].checked ? elements['edit-qr-code-data'].value : null
+        qrCodeData: elements['edit-wechat'].checked ? elements['edit-qr-code-data'].value : null,
+        announcementHtml: getEditorHtml('edit-announcement-editor', DEFAULT_ANNOUNCEMENT_HTML),
+        hintHtml: getEditorHtml('edit-hint-editor', DEFAULT_HINT_HTML)
       };
       validateFormData(payload);
       return payload;
@@ -985,6 +1334,8 @@
       elements['create-expiry'].value = '';
       elements['create-enabled'].checked = true;
       elements['create-wechat'].checked = true;
+      setEditorHtml('create-announcement-editor', DEFAULT_ANNOUNCEMENT_HTML);
+      setEditorHtml('create-hint-editor', DEFAULT_HINT_HTML);
       resetCreateQrResult();
     }
 
@@ -1004,6 +1355,8 @@
       elements['edit-expiry'].value = item.expiry || '';
       elements['edit-enabled'].checked = item.enabled;
       elements['edit-wechat'].checked = item.isWechat;
+      setEditorHtml('edit-announcement-editor', item.announcementHtml || DEFAULT_ANNOUNCEMENT_HTML);
+      setEditorHtml('edit-hint-editor', item.hintHtml || DEFAULT_HINT_HTML);
       elements['edit-qr-code-data'].value = item.qrCodeData || '';
       elements['edit-decoded-text'].textContent = item.target || '';
       elements['edit-qr-result'].classList.toggle('hidden', !item.qrCodeData);
@@ -1218,6 +1571,7 @@
       });
       elements['reset-qr-btn'].addEventListener('click', resetCreateQrResult);
       elements['copy-decoded-btn'].addEventListener('click', copyDecodedText);
+      bindRichEditors();
       elements['create-wechat'].addEventListener('change', updateCreateTargetLock);
       elements['create-submit-btn'].addEventListener('click', submitCreate);
 
@@ -1374,6 +1728,7 @@
       cacheElements();
       applyTheme(getThemeMode());
       bindEvents();
+      resetCreateForm();
       syncControls();
       await refreshData();
     }

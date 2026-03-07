@@ -21,6 +21,23 @@ const EXPIRING_DAYS = 3;
 const EXPIRED_RETENTION_DAYS = 30;
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 100;
+const DEFAULT_WECHAT_ANNOUNCEMENT_HTML = '<p>请长按识别下方二维码</p>';
+const DEFAULT_WECHAT_HINT_HTML = '<p>二维码失效请联系作者更新</p>';
+const RICH_TEXT_TAG_MAP = {
+  a: 'a',
+  b: 'strong',
+  br: 'br',
+  div: 'div',
+  em: 'em',
+  i: 'em',
+  li: 'li',
+  ol: 'ol',
+  p: 'p',
+  span: 'span',
+  strong: 'strong',
+  u: 'u',
+  ul: 'ul',
+};
 
 const SORT_FIELD_MAP = {
   created_at: 'created_at',
@@ -37,6 +54,15 @@ class AppError extends Error {
     this.status = status;
     this.code = code;
   }
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function json(data, status = 200, headers = {}) {
@@ -177,6 +203,93 @@ function assertValidTarget(target) {
   }
 }
 
+function sanitizeLinkHref(value) {
+  const href = String(value || '').trim();
+  if (!href) {
+    return '';
+  }
+  if (/^(#|\/(?!\/)|\.\.?(\/|$))/i.test(href)) {
+    return href;
+  }
+  try {
+    const parsed = new URL(href);
+    if (['http:', 'https:', 'mailto:', 'tel:'].includes(parsed.protocol)) {
+      return href;
+    }
+  } catch {
+  }
+  return '';
+}
+
+function sanitizeRichText(value, fallback = '') {
+  const source = String(value || '').trim();
+  if (!source) {
+    return fallback;
+  }
+
+  const tokens = source.matchAll(/<\/?([A-Za-z0-9]+)([^>]*)>/g);
+  const stack = [];
+  let lastIndex = 0;
+  let output = '';
+
+  for (const match of tokens) {
+    output += escapeHtml(source.slice(lastIndex, match.index));
+    lastIndex = match.index + match[0].length;
+
+    const rawTag = String(match[1] || '').toLowerCase();
+    const tag = RICH_TEXT_TAG_MAP[rawTag];
+    if (!tag) {
+      continue;
+    }
+
+    const isClosing = match[0][1] === '/';
+    if (isClosing) {
+      if (tag === 'br') {
+        continue;
+      }
+      if (stack[stack.length - 1] === tag) {
+        stack.pop();
+        output += `</${tag}>`;
+      }
+      continue;
+    }
+
+    if (tag === 'br') {
+      output += '<br>';
+      continue;
+    }
+
+    if (tag === 'a') {
+      const attrs = match[2] || '';
+      const hrefMatch = attrs.match(/\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/i);
+      const safeHref = sanitizeLinkHref(hrefMatch ? (hrefMatch[1] || hrefMatch[2] || hrefMatch[3] || '') : '');
+      if (!safeHref) {
+        continue;
+      }
+      const isExternal = !/^(#|\/|\.\.?(\/|$))/i.test(safeHref) && !/^mailto:|^tel:/i.test(safeHref);
+      output += `<a href="${escapeHtml(safeHref)}"${isExternal ? ' target="_blank" rel="noopener noreferrer"' : ''}>`;
+      stack.push('a');
+      continue;
+    }
+
+    output += `<${tag}>`;
+    stack.push(tag);
+  }
+
+  output += escapeHtml(source.slice(lastIndex));
+
+  while (stack.length > 0) {
+    output += `</${stack.pop()}>`;
+  }
+
+  const normalized = output
+    .replace(/(?:&nbsp;|\u00A0)/g, ' ')
+    .replace(/<div><\/div>/gi, '')
+    .trim();
+
+  return normalized || fallback;
+}
+
 function normalizeMappingPayload(payload, options = {}) {
   const path = normalizePath(payload.path);
   const target = String(payload.target || '').trim();
@@ -185,6 +298,8 @@ function normalizeMappingPayload(payload, options = {}) {
   const enabled = normalizeBoolean(payload.enabled, true);
   const isWechat = normalizeBoolean(payload.isWechat, false);
   const qrCodeData = payload.qrCodeData ? String(payload.qrCodeData).trim() : '';
+  const announcementHtml = sanitizeRichText(payload.announcementHtml || payload.announcement_html || '', '');
+  const hintHtml = sanitizeRichText(payload.hintHtml || payload.hint_html || '', '');
 
   if (!path) {
     throw new AppError('短链名不能为空');
@@ -213,6 +328,8 @@ function normalizeMappingPayload(payload, options = {}) {
     enabled,
     isWechat,
     qrCodeData: isWechat ? qrCodeData : null,
+    announcementHtml: announcementHtml || null,
+    hintHtml: hintHtml || null,
   };
 
   if (options.includeMeta) {
@@ -263,6 +380,8 @@ function serializeMapping(row) {
     enabled: row.enabled === 1 || row.enabled === true,
     isWechat: row.isWechat === 1 || row.isWechat === true,
     qrCodeData: row.qrCodeData || '',
+    announcementHtml: row.announcementHtml || row.announcement_html || '',
+    hintHtml: row.hintHtml || row.hint_html || '',
     visitCount: Number(row.visit_count || row.visitCount || 0) || 0,
     lastVisitedAt: row.last_visited_at || row.lastVisitedAt || '',
     createdAt: row.created_at || row.createdAt || '',
@@ -334,6 +453,8 @@ async function initDatabase() {
       enabled INTEGER DEFAULT 1,
       isWechat INTEGER DEFAULT 0,
       qrCodeData TEXT,
+      announcementHtml TEXT,
+      hintHtml TEXT,
       visit_count INTEGER DEFAULT 0,
       last_visited_at TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -349,6 +470,12 @@ async function initDatabase() {
   }
   if (!columns.has('qrCodeData')) {
     await DB.prepare('ALTER TABLE mappings ADD COLUMN qrCodeData TEXT').run();
+  }
+  if (!columns.has('announcementHtml')) {
+    await DB.prepare('ALTER TABLE mappings ADD COLUMN announcementHtml TEXT').run();
+  }
+  if (!columns.has('hintHtml')) {
+    await DB.prepare('ALTER TABLE mappings ADD COLUMN hintHtml TEXT').run();
   }
   if (!columns.has('visit_count')) {
     await DB.prepare('ALTER TABLE mappings ADD COLUMN visit_count INTEGER DEFAULT 0').run();
@@ -376,7 +503,7 @@ async function initDatabase() {
 
 async function getMappingByPath(path) {
   const mapping = await DB.prepare(`
-    SELECT path, target, name, expiry, enabled, isWechat, qrCodeData, visit_count, last_visited_at, created_at, updated_at
+    SELECT path, target, name, expiry, enabled, isWechat, qrCodeData, announcementHtml, hintHtml, visit_count, last_visited_at, created_at, updated_at
     FROM mappings
     WHERE path = ?
   `).bind(path).first();
@@ -397,9 +524,9 @@ async function createMapping(payload, options = {}) {
   if (options.includeMeta) {
     await DB.prepare(`
       INSERT INTO mappings (
-        path, target, name, expiry, enabled, isWechat, qrCodeData,
+        path, target, name, expiry, enabled, isWechat, qrCodeData, announcementHtml, hintHtml,
         visit_count, last_visited_at, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       mapping.path,
       mapping.target,
@@ -408,6 +535,8 @@ async function createMapping(payload, options = {}) {
       mapping.enabled ? 1 : 0,
       mapping.isWechat ? 1 : 0,
       mapping.qrCodeData,
+      mapping.announcementHtml,
+      mapping.hintHtml,
       mapping.visitCount,
       mapping.lastVisitedAt,
       mapping.createdAt || new Date().toISOString(),
@@ -415,8 +544,8 @@ async function createMapping(payload, options = {}) {
     ).run();
   } else {
     await DB.prepare(`
-      INSERT INTO mappings (path, target, name, expiry, enabled, isWechat, qrCodeData, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO mappings (path, target, name, expiry, enabled, isWechat, qrCodeData, announcementHtml, hintHtml, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       mapping.path,
       mapping.target,
@@ -425,6 +554,8 @@ async function createMapping(payload, options = {}) {
       mapping.enabled ? 1 : 0,
       mapping.isWechat ? 1 : 0,
       mapping.qrCodeData,
+      mapping.announcementHtml,
+      mapping.hintHtml,
       new Date().toISOString()
     ).run();
   }
@@ -456,7 +587,7 @@ async function updateMapping(payload) {
 
   await DB.prepare(`
     UPDATE mappings
-    SET path = ?, target = ?, name = ?, expiry = ?, enabled = ?, isWechat = ?, qrCodeData = ?, updated_at = ?
+    SET path = ?, target = ?, name = ?, expiry = ?, enabled = ?, isWechat = ?, qrCodeData = ?, announcementHtml = ?, hintHtml = ?, updated_at = ?
     WHERE path = ?
   `).bind(
     mapping.path,
@@ -466,6 +597,8 @@ async function updateMapping(payload) {
     mapping.enabled ? 1 : 0,
     mapping.isWechat ? 1 : 0,
     qrCodeData,
+    mapping.announcementHtml,
+    mapping.hintHtml,
     new Date().toISOString(),
     originalPath
   ).run();
@@ -525,7 +658,7 @@ async function listMappings(filters) {
 
   const totalResult = await DB.prepare(`SELECT COUNT(*) AS total FROM mappings WHERE ${where}`).bind(...bindings).first();
   const rows = await DB.prepare(`
-    SELECT path, target, name, expiry, enabled, isWechat, qrCodeData, visit_count, last_visited_at, created_at, updated_at
+    SELECT path, target, name, expiry, enabled, isWechat, qrCodeData, announcementHtml, hintHtml, visit_count, last_visited_at, created_at, updated_at
     FROM mappings
     WHERE ${where}
     ORDER BY ${sortBy} ${sortOrder}, created_at DESC
@@ -600,7 +733,7 @@ async function getDashboard() {
   `).bind(today, today, expiringLimit, ...bindings).first();
 
   const topVisited = await DB.prepare(`
-    SELECT path, target, name, expiry, enabled, isWechat, qrCodeData, visit_count, last_visited_at, created_at, updated_at
+    SELECT path, target, name, expiry, enabled, isWechat, qrCodeData, announcementHtml, hintHtml, visit_count, last_visited_at, created_at, updated_at
     FROM mappings
     WHERE path NOT IN (${reservedPlaceholders})
     ORDER BY visit_count DESC, updated_at DESC
@@ -623,7 +756,7 @@ async function exportMappings() {
   const bindings = Array.from(RESERVED_PATHS);
   const placeholders = bindings.map(() => '?').join(',');
   const rows = await DB.prepare(`
-    SELECT path, target, name, expiry, enabled, isWechat, qrCodeData, visit_count, last_visited_at, created_at, updated_at
+    SELECT path, target, name, expiry, enabled, isWechat, qrCodeData, announcementHtml, hintHtml, visit_count, last_visited_at, created_at, updated_at
     FROM mappings
     WHERE path NOT IN (${placeholders})
     ORDER BY created_at DESC
@@ -702,8 +835,8 @@ function shouldServeAssetFirst(path) {
 }
 
 function createExpiredHtml(mapping) {
-  const title = mapping.name ? `${mapping.name} 已过期` : '链接已过期';
-  const expiry = mapping.expiry || '';
+  const title = escapeHtml(mapping.name ? `${mapping.name} 已过期` : '链接已过期');
+  const expiry = escapeHtml(mapping.expiry || '');
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -735,7 +868,9 @@ function createExpiredHtml(mapping) {
 }
 
 function createWechatHtml(mapping) {
-  const title = mapping.name || '微信群二维码';
+  const title = escapeHtml(mapping.name || '微信群二维码');
+  const announcementHtml = sanitizeRichText(mapping.announcementHtml || mapping.announcement_html || '', DEFAULT_WECHAT_ANNOUNCEMENT_HTML);
+  const hintHtml = sanitizeRichText(mapping.hintHtml || mapping.hint_html || '', DEFAULT_WECHAT_HINT_HTML);
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -745,16 +880,22 @@ function createWechatHtml(mapping) {
   <style>
     :root { color-scheme: light dark; }
     body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    .card { width: min(100%, 360px); padding: 28px 24px; text-align: center; background: #fff; border-radius: 18px; box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08); }
+    .card { width: min(100%, 420px); padding: 28px 24px; text-align: center; background: #fff; border-radius: 18px; box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08); }
     .icon { width: 40px; height: 40px; margin-bottom: 12px; }
     h1 { margin: 0 0 8px; font-size: 24px; color: #111827; }
-    p { margin: 8px 0; color: #6b7280; line-height: 1.6; }
+    .rich-text { color: #6b7280; line-height: 1.7; }
+    .rich-text :where(p, div, ul, ol) { margin: 10px 0 0; }
+    .rich-text :where(p, div, ul, ol):first-child { margin-top: 0; }
+    .rich-text :where(ul, ol) { padding-left: 1.4em; text-align: left; }
+    .rich-text :where(li + li) { margin-top: 0.35em; }
+    .rich-text a { color: #2563eb; text-decoration: underline; }
     img.qr { width: 100%; max-width: 260px; margin: 18px auto 0; border-radius: 16px; display: block; background: #fff; }
     @media (prefers-color-scheme: dark) {
       body { background: #0f172a; }
       .card { background: #111827; box-shadow: none; }
       h1 { color: #f8fafc; }
-      p { color: #cbd5e1; }
+      .rich-text { color: #cbd5e1; }
+      .rich-text a { color: #93c5fd; }
     }
   </style>
 </head>
@@ -762,9 +903,9 @@ function createWechatHtml(mapping) {
   <div class="card">
     <img class="icon" src="/wechat.svg" alt="WeChat">
     <h1>${title}</h1>
-    <p>请长按识别下方二维码</p>
-    <img class="qr" src="${mapping.qrCodeData}" alt="微信群二维码">
-    <p>二维码失效请联系作者更新</p>
+    <div class="rich-text">${announcementHtml}</div>
+    <img class="qr" src="${escapeHtml(mapping.qrCodeData || '')}" alt="微信群二维码">
+    <div class="rich-text">${hintHtml}</div>
   </div>
 </body>
 </html>`;
