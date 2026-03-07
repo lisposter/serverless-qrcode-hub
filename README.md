@@ -2,7 +2,7 @@
 
 ## CHANGELOG
 
-- 2026-03-07: 优化界面，更新项目依赖，修复 SQL 问题，并持续调整 `dist/admin.html` 与后台相关页面。
+- 2026-03-07: 优化界面，新增自定义提示信息功能，优化桌面与移动端布局
 
 苦于微信群聊二维码频繁变动，开发这个能生成永久二维码的工具，**不需要服务器**。基于 Cloudflare Workers 和 D1 实现。
 
@@ -50,7 +50,7 @@
 - 微信识别
 
   ![preview-wechat](./images/preview-wechat.jpg)
-  
+
 - 短链跳转就不展示了，是直接跳转的
 
 ## 使用步骤
@@ -92,25 +92,25 @@
 
    ![](./images/9.jpg)
 
-10. 设置一个你在 Cloudflare 托管的域名的子域名 
+10. 设置一个你在 Cloudflare 托管的域名的子域名
 
-   ![](./images/10.jpg)
+![](./images/10.jpg)
 
 11. 按图中步骤设置访问密码，注意密码格式为英文字母和数字，尽量长尽量复杂，推荐使用两段随机生成的uuid字符串作为密码
 
-   ![](./images/11.png)
+![](./images/11.png)
 
 12. 部署成功，此时已经可以面板上通过默认分配的 `*.workers.dev` 或者你自定义的域名访问了！
 
 13. 访问并登录后，创建短链接例子
 
-   ![](./images/12.png)
-   ![](./images/13.png)
+![](./images/12.png)
+![](./images/13.png)
 
 14. 创建微信群聊活码例子
 
-   ![](./images/14.png)
-   ![](./images/15.png)
+![](./images/14.png)
+![](./images/15.png)
 
 ## TODO
 
