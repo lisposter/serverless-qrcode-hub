@@ -27,7 +27,9 @@
     }
     .target-link,
     .target-text {
-      word-break: break-all;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
     }
     #alertContainer {
       pointer-events: none;
@@ -276,7 +278,7 @@
                   <span class="label-text">启用该短链</span>
                 </label>
                 <label class="label cursor-pointer justify-start gap-2 p-0">
-                  <input id="create-wechat" type="checkbox" class="toggle toggle-primary">
+                  <input id="create-wechat" type="checkbox" class="toggle toggle-primary" checked>
                   <span class="label-text">微信二维码</span>
                 </label>
               </div>
@@ -366,17 +368,17 @@
 
           <progress id="list-loading" class="progress progress-primary hidden w-full"></progress>
 
-          <div id="desktop-list" class="hidden overflow-x-auto lg:block">
-            <table class="table table-zebra min-w-max">
+          <div id="desktop-list" class="hidden lg:block">
+            <table class="table table-zebra table-fixed w-full">
               <thead>
                 <tr>
                   <th class="w-12">
                     <input id="select-all-checkbox" type="checkbox" class="checkbox checkbox-sm">
                   </th>
-                  <th>条目</th>
-                  <th>目标 URL</th>
-                  <th>有效日期</th>
-                  <th>访问数据</th>
+                  <th class="w-48">条目</th>
+                  <th class="w-[30%]">目标 URL</th>
+                  <th class="w-40">有效日期</th>
+                  <th class="w-40">访问数据</th>
                   <th class="w-28">状态</th>
                   <th class="w-52">操作</th>
                 </tr>
@@ -654,7 +656,7 @@
             <td>
               <div class="target-text text-sm text-base-content/80">${escapeHtml(item.target)}</div>
               <div class="mt-2">
-                <a class="link link-primary text-xs" href="${escapeHtml(getShortUrl(item.path))}" target="_blank">${escapeHtml(getShortUrl(item.path))}</a>
+                <a class="target-link link link-primary text-xs" href="${escapeHtml(getShortUrl(item.path))}" target="_blank">${escapeHtml(getShortUrl(item.path))}</a>
               </div>
             </td>
             <td>
@@ -796,7 +798,7 @@
       elements['decoded-text'].textContent = '';
       elements['qr-result'].classList.add('hidden');
       elements['create-target'].readOnly = false;
-      elements['create-wechat'].checked = false;
+      elements['create-wechat'].checked = true;
       elements['create-wechat'].disabled = false;
       elements['qr-file'].value = '';
     }
@@ -982,7 +984,7 @@
       elements['create-target'].value = '';
       elements['create-expiry'].value = '';
       elements['create-enabled'].checked = true;
-      elements['create-wechat'].checked = false;
+      elements['create-wechat'].checked = true;
       resetCreateQrResult();
     }
 
